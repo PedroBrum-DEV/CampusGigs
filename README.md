@@ -26,6 +26,7 @@ O projeto reúne, em uma única aplicação, os principais conceitos trabalhados
 - **Regras de negócio por papel de usuário**: o que um aluno pode fazer, o que só o dono do recurso pode fazer, e o que é exclusivo de administrador
 - **Persistência e versionamento de banco**: JPA/Hibernate com PostgreSQL, schema controlado por migrations do Flyway
 - **Infraestrutura em containers**: banco de dados sobe via Docker Compose
+- **Integração externa**: consulta de endereço por CEP via ViaCEP, usando cliente HTTP declarativo do Spring (`@HttpExchange`)
 
 ---
 
@@ -47,21 +48,20 @@ O projeto reúne, em uma única aplicação, os principais conceitos trabalhados
 
 ## Arquitetura
 
-```
 Cliente (console HTML / Insomnia / Postman)
-              │
-              ▼
-   Spring Boot REST API (porta 8080)
-              │
-   ┌──────────┼──────────┐
-   │          │          │
-Controller  Service   Security (JWT)
-   │          │
-   └────► Repository (Spring Data JPA)
-              │
-              ▼
-        PostgreSQL (Docker)
-```
+│
+▼
+Spring Boot REST API (porta 8081)
+│
+┌──────────┼──────────┐
+│ │ │
+Controller Service Security (JWT)
+│ │
+└────► Repository (Spring Data JPA)
+│
+▼
+PostgreSQL (Docker)
+
 
 A API segue uma arquitetura em camadas:
 
@@ -71,6 +71,7 @@ A API segue uma arquitetura em camadas:
 - **`model`** — entidades JPA mapeadas para as tabelas do banco
 - **`dto`** — objetos de entrada e saída da API (nunca expomos as entidades diretamente)
 - **`security`** — geração e validação de JWT, filtro de autenticação
+- **`client`** — cliente HTTP declarativo (`@HttpExchange`) usado na consulta de CEP (ViaCEP)
 - **`exception`** — exceções de domínio e tratamento global de erros
 
 ---
@@ -111,10 +112,12 @@ A API segue uma arquitetura em camadas:
 ### 1. Subir o banco de dados
 
 ```bash
-docker compose up -d
+docker compose up -d campusgigs-db
 ```
 
-Isso inicia um container PostgreSQL em `localhost:5432`.
+Isso inicia apenas o container PostgreSQL em `localhost:5432`, com o banco `campusgigs`, usuário `campusgigs` e senha `campusgigs123` já configurados.
+
+> ⚠️ **Nota:** o serviço `campusgigs-api` do `docker-compose.yml` ainda não está com a porta alinhada ao `application.properties` (a app escuta em `8081`, mas o compose mapeia `8080:8080`). Por isso, recomendamos rodar a API localmente pela IDE/Maven (passo 2) até esse ajuste ser feito no compose.
 
 ### 2. Executar a aplicação
 
@@ -126,6 +129,7 @@ Ao subir, o Flyway aplica automaticamente as migrations localizadas em `src/main
 
 - `V1__init_schema.sql` — cria as tabelas `users`, `gigs` e `applications`
 - `V2__seed_data.sql` — popula o banco com usuários e freelas de exemplo
+- `V3__add_address_to_users.sql` — adiciona endereço (preenchido via consulta de CEP) aos usuários
 
 ### 3. Usuários de teste (seed)
 
@@ -140,9 +144,8 @@ Ao subir, o Flyway aplica automaticamente as migrations localizadas em `src/main
 
 Com a aplicação em execução, acesse:
 
-```
-http://localhost:8080
-```
+http://localhost:8081
+
 
 Um console de testes é servido diretamente pela aplicação, permitindo autenticar, criar freelas, se candidatar e testar todas as regras de negócio pelo navegador, sem necessidade de ferramentas externas.
 
@@ -151,59 +154,3 @@ Alternativamente, é possível usar o arquivo [`requests.http`](./requests.http)
 ---
 
 ## Endpoints
-
-```
-POST   /auth/register              Registra um novo aluno                          (público)
-POST   /auth/login                 Autentica e retorna o token JWT                 (público)
-
-GET    /gigs                       Lista todos os freelas                          (público)
-GET    /gigs/{id}                  Detalha um freela                               (público)
-POST   /gigs                       Publica um freela                               (autenticado)
-PUT    /gigs/{id}                  Edita um freela                                 (dono ou admin)
-PATCH  /gigs/{id}/close            Encerra um freela                               (dono ou admin)
-DELETE /gigs/{id}                  Remove um freela                                (dono ou admin)
-
-POST   /gigs/{id}/applications     Candidata-se a um freela                        (autenticado)
-GET    /gigs/{id}/applications     Lista as candidaturas de um freela              (dono ou admin)
-GET    /applications/me            Lista as próprias candidaturas                  (autenticado)
-PATCH  /applications/{id}/status   Aceita ou rejeita uma candidatura               (dono ou admin)
-DELETE /applications/{id}          Retira uma candidatura                          (candidato ou admin)
-
-GET    /users/me                   Consulta o próprio perfil                       (autenticado)
-GET    /users                      Lista todos os usuários                         (admin)
-DELETE /users/{id}                 Remove um usuário                               (admin)
-```
-
----
-
-## Estrutura do projeto
-
-```
-campusgigs-api/
-├── docker-compose.yml
-├── pom.xml
-├── requests.http
-├── src/
-│   ├── main/
-│   │   ├── java/br/com/fiap/campusgigs/
-│   │   │   ├── config/           # Configuração do Spring Security
-│   │   │   ├── controller/       # Endpoints REST
-│   │   │   ├── dto/              # Objetos de entrada e saída da API
-│   │   │   ├── exception/        # Exceções de domínio e tratamento global de erros
-│   │   │   ├── model/            # Entidades JPA
-│   │   │   ├── repository/       # Repositórios Spring Data JPA
-│   │   │   ├── security/         # Geração/validação de JWT
-│   │   │   └── service/          # Regras de negócio
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       ├── static/index.html # Console de testes servido pela própria aplicação
-│   │       └── db/migration/     # Migrations do Flyway
-│   └── test/
-└── README.md
-```
-
----
-
-## Licença
-
-Projeto de caráter acadêmico, sem fins comerciais.
