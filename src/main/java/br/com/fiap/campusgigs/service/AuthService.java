@@ -4,6 +4,7 @@ import br.com.fiap.campusgigs.dto.LoginRequest;
 import br.com.fiap.campusgigs.dto.RegisterRequest;
 import br.com.fiap.campusgigs.dto.TokenResponse;
 import br.com.fiap.campusgigs.exception.UsernameAlreadyExistsException;
+import br.com.fiap.campusgigs.model.Address;
 import br.com.fiap.campusgigs.model.Role;
 import br.com.fiap.campusgigs.model.User;
 import br.com.fiap.campusgigs.repository.UserRepository;
@@ -22,17 +23,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final AddressService addressService;
 
     public TokenResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             throw new UsernameAlreadyExistsException("Já existe um usuário com o username: " + request.username());
         }
 
+        Address address = addressService.resolveByCep(request.cep());
+
         User user = User.builder()
                 .name(request.name())
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.STUDENT)
+                .address(address)
                 .build();
 
         userRepository.save(user);

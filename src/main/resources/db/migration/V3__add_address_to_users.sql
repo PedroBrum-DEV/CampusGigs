@@ -1,0 +1,6 @@
+ALTER TABLE users
+    ADD COLUMN cep VARCHAR(8),
+    ADD COLUMN logradouro VARCHAR(150),
+    ADD COLUMN bairro VARCHAR(100),
+    ADD COLUMN cidade VARCHAR(100),
+    ADD COLUMN uf VARCHAR(2);

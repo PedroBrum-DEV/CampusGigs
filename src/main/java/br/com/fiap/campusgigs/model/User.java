@@ -38,6 +38,9 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    @Embedded
+    private Address address;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

@@ -2,6 +2,7 @@ package br.com.fiap.campusgigs.service;
 
 import br.com.fiap.campusgigs.exception.ForbiddenActionException;
 import br.com.fiap.campusgigs.exception.ResourceNotFoundException;
+import br.com.fiap.campusgigs.model.Address;
 import br.com.fiap.campusgigs.model.User;
 import br.com.fiap.campusgigs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AddressService addressService;
 
     @Transactional(readOnly = true)
     public List<User> findAll(User currentUser) {
@@ -34,6 +36,13 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id " + userId));
 
         userRepository.delete(target);
+    }
+
+    @Transactional
+    public User updateAddress(User currentUser, String cep) {
+        Address address = addressService.resolveByCep(cep);
+        currentUser.setAddress(address);
+        return userRepository.save(currentUser);
     }
 
     private void assertAdmin(User currentUser) {
