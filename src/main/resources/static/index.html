@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
@@ -277,7 +277,7 @@
     <div class="brand">Campus<span>Gigs</span> · Console</div>
     <div class="baseurl-wrap">
         <label for="baseUrl">API</label>
-        <input id="baseUrl" type="text" value="http://localhost:8080" />
+        <input id="baseUrl" type="text" value="http://localhost:8081" />
     </div>
     <div class="session">
         <span class="who" id="whoLabel">não logado</span>
@@ -305,12 +305,13 @@
                     method: "POST",
                     path: "/auth/register",
                     label: "Registrar aluno",
-                    desc: "Cria um novo usuário (sempre com papel STUDENT).",
+                    desc: "Cria um novo usuário (sempre com papel STUDENT). O CEP é validado e enriquecido (cidade/UF) via ViaCEP.",
                     auth: "none",
                     fields: [
                         { name: "name", label: "Nome", type: "text", value: "Diego Teste" },
                         { name: "username", label: "Username", type: "text", value: "diego.teste" },
-                        { name: "password", label: "Senha", type: "text", value: "senha123" }
+                        { name: "password", label: "Senha", type: "text", value: "senha123" },
+                        { name: "cep", label: "CEP", type: "text", value: "01310930" }
                     ],
                     onSuccess: (data) => { if (data.token) applySession(data); }
                 },
@@ -379,7 +380,9 @@
         {
             title: "Usuários",
             items: [
-                { id: "users-me", method: "GET", path: "/users/me", label: "Meu perfil", desc: "Qualquer autenticado.", auth: "required", fields: [] },
+                { id: "users-me", method: "GET", path: "/users/me", label: "Meu perfil", desc: "Qualquer autenticado. Mostra também cep/cidade/uf.", auth: "required", fields: [] },
+                { id: "users-address", method: "PATCH", path: "/users/me/address", label: "Atualizar CEP", desc: "Consulta o CEP via HttpExchange (ViaCEP) e atualiza cidade/UF do usuário logado.", auth: "required",
+                    fields: [ { name: "cep", label: "CEP", type: "text", value: "01310930" } ] },
                 { id: "users-list", method: "GET", path: "/users", label: "Listar usuários", desc: "Somente admin.", auth: "required", fields: [] },
                 { id: "users-delete", method: "DELETE", path: "/users/{id}", label: "Remover usuário", desc: "Somente admin.", auth: "required",
                     fields: [ { name: "id", label: "ID do usuário", type: "text", value: "3", inPath: true } ] }
